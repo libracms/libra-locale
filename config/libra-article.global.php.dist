@@ -1,0 +1,17 @@
+<?php
+$config = array(
+    //default language tag
+    'default' => 'en',
+    'langtags' => array(
+        //langtag => alias
+        'en' => 'en-US',
+        'ru' => 'ru-RU',
+        'fr',
+        'ru-UK',
+        'uk-UK',
+    ),
+);
+
+return array(
+    'libra_locale' => $config,
+);
