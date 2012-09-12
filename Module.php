@@ -12,10 +12,13 @@ use Locale;
 
 class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 {
+    protected static $homeRouteName;
+    protected static $options;
 
     public function init(ModuleManager $moduleManager)
     {
-        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'addLocaleToRoutes'), 100);
+        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'addLocaleToRoutes'), 1000);
+        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'setOptions'), 1);
     }
 
     public function addLocaleToRoutes(ModuleEvent $e)
@@ -24,6 +27,23 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         $routes = &$config['router']['routes'];
         foreach ($routes as $key => &$route) {
             if ($key == 'admin') continue;
+            if (!isset($route['options']['multilocale']) 
+                  || !isset($route['options']['multilocale'])
+                  || $route['options']['multilocale'] == false) {
+                continue;
+            }
+            
+            //add redirect for home
+            if ($route['options']['route'] == '/') {
+                static::$homeRouteName = $key;
+                $routes['__home'] = array(
+                    'type' => 'Zend\Mvc\Router\Http\Literal',
+                    'options' => array(
+                        'route'    => '/',
+                    ),
+                );
+            }
+
             if (strpos($route['options']['route'], ':locale') === false) {
                 $route['options']['route'] = '/:locale' . $route['options']['route'];
             }
@@ -35,13 +55,6 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
             if (!isset($route['options']['defaults'])) $route['options']['defaults'] = array();
             $route['options']['defaults'] = array_merge($route['options']['defaults'], array('locale' => 'en'));
         }
-        $routes['__home'] = array(
-            'type' => 'Zend\Mvc\Router\Http\Literal',
-            'options' => array(
-                'route'    => '/',
-            ),
-        );
-        //$a = \Locale::
         $e->getConfigListener()->setMergedConfig($config);
         return null;
     }
@@ -55,7 +68,7 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     {
         if ($e->getRouteMatch()->getMatchedRouteName() == '__home') {
             $router = $e->getRouter();
-            $url = $router->assemble(array(), array('name' => 'home'));
+            $url = $router->assemble(array(), array('name' => static::$homeRouteName));
             $response = $e->getResponse();
             $response->getHeaders()->addHeaderLine('Location', $url);
             $response->setStatusCode(301);
@@ -65,24 +78,31 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 
     public function redirectFromNonExistentLocale(MvcEvent $e)
     {
-        $config = $e->getApplication()->getServiceManager()->get('config');
-        $config = $config['libra_locale'];
         $routeMatch = $e->getRouteMatch();
         $locale = $routeMatch->getParam('locale');
-        //if (($key = array_search($locale, $config['langtags'])) != false) {
-        if (key_exists($locale, $config['langtags'])) {
-            $locale = $config['langtags'][$locale];
+        if ($locale === null) return 0;  //do nothing
+
+        $config = $e->getApplication()->getServiceManager()->get('config');
+        $config = $config['libra_locale'];
+        //replace alias by existent locale
+        if (key_exists($locale, $config['locales'])) {
+            $locale = $config['locales'][$locale];
+            //set params for modules get param
+            $routeMatch->setParam('locale', $locale);
         }
-        $newLocale = Locale::lookup($config['langtags'], $locale, false, $config['default']);
-        if ($locale !== $newLocale) {
+
+        $newLocale = Locale::lookup($config['locales'], $locale, false, $config['default']);
+        if ($newLocale !== $locale) {
             $routeMatch->setParam('locale', $newLocale);
             $router = $e->getRouter();
-            $url = $router->assemble(array(), $routeMatch->getParams());
+            $url = $router->assemble($routeMatch->getParams(), array('name' => $routeMatch->getMatchedRouteName()));
             $response = $e->getResponse();
             $response->getHeaders()->addHeaderLine('Location', $url);
             $response->setStatusCode(303);
             return $response;
         }
+
+        return 0; //return success
     }
 
     /**
@@ -93,6 +113,26 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     public function onBootstrap(MvcEvent $e)
     {
         $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromEmptyPath'));
+        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromNonExistentLocale'));
+    }
+
+    public function setOptions($e)
+    {
+        $config = $e->getConfigListener()->getMergedConfig();
+        static::$options = $config['libra_locale'];
+    }
+
+    public static function getOption($option)
+    {
+        if (!isset(static::$options[$option])) {
+            return null;
+        }
+        return static::$options[$option];
+    }
+
+    public static function getLocales()
+    {
+        return static::getOption('locales');
     }
 
     public function getConfig()

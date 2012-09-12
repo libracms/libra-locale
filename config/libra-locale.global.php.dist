@@ -1,0 +1,17 @@
+<?php
+$config = array(
+    //default locale
+    'default' => 'en-US',
+    'locales' => array(
+        //alias => locale
+        'en' => 'en-US',
+        /*'ru' => 'ru-RU',
+        'fr',
+        'ru-UK',
+        'uk-UK',*/
+    ),
+);
+
+return array(
+    'libra_locale' => $config,
+);
