@@ -12,6 +12,10 @@ use Locale;
 
 class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 {
+    //const option for enable locale router and others
+    const LOCALE_AWARE = 'locale_aware';
+    const LOCALE_ROUTE_PARAM = 'locale';
+
     protected static $homeRouteName;
     protected static $options;
 
@@ -24,12 +28,13 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     public function addLocaleToRoutes(ModuleEvent $e)
     {
         $config = $e->getConfigListener()->getMergedConfig(false);
+        $this->setOptions($e);
         $routes = &$config['router']['routes'];
         foreach ($routes as $key => &$route) {
             if ($key == 'admin') continue;
-            if (!isset($route['options']['multilocale']) 
-                  || !isset($route['options']['multilocale'])
-                  || $route['options']['multilocale'] == false) {
+            if (!isset($route['options'][self::LOCALE_AWARE])
+                  || !isset($route['options'][self::LOCALE_AWARE])
+                  || $route['options'][self::LOCALE_AWARE] == false) {
                 continue;
             }
             
@@ -55,9 +60,11 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 
             if (!isset($route['options']['defaults'])) $route['options']['defaults'] = array();
             $defaultLocale = $config['libra_locale']['default'];
+            if (static::hasLocaleAlias($defaultLocale)) $defaultLocale = static::getLocaleAlias($defaultLocale);
             $route['options']['defaults'] = array_merge($route['options']['defaults'], array('locale' => $defaultLocale));
         }
         $e->getConfigListener()->setMergedConfig($config);
+        static::$options = null; //don't use while not set at priority 1
         return null;
     }
 
@@ -81,12 +88,12 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     public function redirectFromNonExistentLocale(MvcEvent $e)
     {
         $routeMatch = $e->getRouteMatch();
-        $locale = $routeMatch->getParam('locale');
+        $locale = $routeMatch->getParam(self::LOCALE_ROUTE_PARAM);
         if ($locale === null) return 0;  //do nothing
 
         //redirect if this locale has alias for having only one instance of URI.
         if (static::hasLocaleAlias($locale)) {
-            $routeMatch->setParam('locale', static::getLocaleAlias($locale));
+            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, static::getLocaleAlias($locale));
             $statusCode = 301;
             goto redirect;
         }
@@ -96,12 +103,12 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
             $locales = static::getLocales();
             $locale = $locales[$locale];
             //set params for modules get param
-            $routeMatch->setParam('locale', $locale);
+            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, $locale);
         }
 
         $newLocale = Locale::lookup(static::getLocales(), $locale, false, static::getOption('default'));
         if ($newLocale !== $locale) {
-            $routeMatch->setParam('locale', $newLocale);
+            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, $newLocale);
 redirect:   $router = $e->getRouter();
             $url = $router->assemble($routeMatch->getParams(), array('name' => $routeMatch->getMatchedRouteName()));
             $response = $e->getResponse();
@@ -124,7 +131,7 @@ redirect:   $router = $e->getRouter();
         $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromNonExistentLocale'));
     }
 
-    public function setOptions($e)
+    public function setOptions(ModuleEvent $e)
     {
         $config = $e->getConfigListener()->getMergedConfig(false);
         static::$options = $config['libra_locale'];

@@ -9,7 +9,7 @@ return array(
     //defaults
     'libra_locale' => array(
         //default locale
-        'default' => 'en',
+        'default' => 'en-US',
         //language tags and their shotcuts
         'locales' => array(
             //alias => langtag
