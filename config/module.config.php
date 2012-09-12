@@ -8,7 +8,7 @@ return array(
 
     //defaults
     'libra_locale' => array(
-        //default locale
+        //default locale, not alias
         'default' => 'en-US',
         //language tags and their shotcuts
         'locales' => array(

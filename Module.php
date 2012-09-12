@@ -16,6 +16,7 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     const LOCALE_AWARE = 'locale_aware';
     const LOCALE_ROUTE_PARAM = 'locale';
 
+    public static $locale;
     protected static $homeRouteName;
     protected static $options;
 
@@ -120,6 +121,13 @@ redirect:   $router = $e->getRouter();
         return 0; //return success
     }
 
+    public function setDefaultLocale(MvcEvent $e)
+    {
+        $locale = $e->getRouteMatch()->getParam(self::LOCALE_ROUTE_PARAM);
+        static::$locale = $locale;
+        Locale::setDefault($locale);
+    }
+
     /**
      * executes on boostrap
      * @param \Zend\Mvc\MvcEvent $e
@@ -129,6 +137,8 @@ redirect:   $router = $e->getRouter();
     {
         $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromEmptyPath'));
         $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromNonExistentLocale'));
+        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'setDefaultLocale'));
+        return;
     }
 
     public function setOptions(ModuleEvent $e)

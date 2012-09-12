@@ -1,14 +1,15 @@
 <?php
 $config = array(
-    //default locale
+    //default locale, not alias
     'default' => 'en-US',
     'locales' => array(
         //alias => locale
         'en' => 'en-US',
-        /*'ru' => 'ru-RU',
+        /*'en-GB',
+        'ru' => 'ru-RU',
         'fr',
-        'ru-UK',
-        'uk-UK',*/
+        'ru-UA',
+        'uk-UA',*/
     ),
 );
 

@@ -46,6 +46,13 @@ class LocaleEnv
     protected $monetary;
 
     /**
+     * Formats of informative and diagnostic messages and
+     * interactive responses.
+     * @var type
+     */
+    protected $messages;
+
+    /**
      * Paper size (For creating pdf, etc).
      * @var type
      */
