@@ -52,8 +52,10 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
             }
             if (!isset($route['options']['constraints'])) $route['options']['constraints'] = array();
             $route['options']['constraints'] = array_merge($route['options']['constraints'], array('locale' => '[a-zA-Z][a-zA-Z_-]*'));
+
             if (!isset($route['options']['defaults'])) $route['options']['defaults'] = array();
-            $route['options']['defaults'] = array_merge($route['options']['defaults'], array('locale' => 'en'));
+            $defaultLocale = $config['libra_locale']['default'];
+            $route['options']['defaults'] = array_merge($route['options']['defaults'], array('locale' => $defaultLocale));
         }
         $e->getConfigListener()->setMergedConfig($config);
         return null;
@@ -82,23 +84,29 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         $locale = $routeMatch->getParam('locale');
         if ($locale === null) return 0;  //do nothing
 
-        $config = $e->getApplication()->getServiceManager()->get('config');
-        $config = $config['libra_locale'];
+        //redirect if this locale has alias for having only one instance of URI.
+        if (static::hasLocaleAlias($locale)) {
+            $routeMatch->setParam('locale', static::getLocaleAlias($locale));
+            $statusCode = 301;
+            goto redirect;
+        }
+
         //replace alias by existent locale
-        if (key_exists($locale, $config['locales'])) {
-            $locale = $config['locales'][$locale];
+        if (key_exists($locale, static::getLocales())) {
+            $locales = static::getLocales();
+            $locale = $locales[$locale];
             //set params for modules get param
             $routeMatch->setParam('locale', $locale);
         }
 
-        $newLocale = Locale::lookup($config['locales'], $locale, false, $config['default']);
+        $newLocale = Locale::lookup(static::getLocales(), $locale, false, static::getOption('default'));
         if ($newLocale !== $locale) {
             $routeMatch->setParam('locale', $newLocale);
-            $router = $e->getRouter();
+redirect:   $router = $e->getRouter();
             $url = $router->assemble($routeMatch->getParams(), array('name' => $routeMatch->getMatchedRouteName()));
             $response = $e->getResponse();
             $response->getHeaders()->addHeaderLine('Location', $url);
-            $response->setStatusCode(303);
+            $response->setStatusCode(isset($statusCode) ? $statusCode : 303);
             return $response;
         }
 
@@ -118,7 +126,7 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 
     public function setOptions($e)
     {
-        $config = $e->getConfigListener()->getMergedConfig();
+        $config = $e->getConfigListener()->getMergedConfig(false);
         static::$options = $config['libra_locale'];
     }
 
@@ -133,6 +141,18 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     public static function getLocales()
     {
         return static::getOption('locales');
+    }
+
+    public static function hasLocaleAlias($locale)
+    {
+        $key = array_search($locale, static::getLocales());
+        return is_string($key) ? true : false;
+    }
+
+    public static function getLocaleAlias($locale)
+    {
+        $key = array_search($locale, static::getLocales());
+        return is_string($key) ? $key : $locale;
     }
 
     public function getConfig()

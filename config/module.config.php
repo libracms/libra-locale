@@ -8,12 +8,12 @@ return array(
 
     //defaults
     'libra_locale' => array(
-        //default language tag
+        //default locale
         'default' => 'en',
         //language tags and their shotcuts
-        'langtags' => array(
+        'locales' => array(
             //alias => langtag
-            // or only langtag value
+            // or only locale value
             'en' => 'en-US',
         ),
     ),
