@@ -2,7 +2,7 @@
     "name":         "libra/libra-locale",
     "type":         "library",
     "version":      "0.3.0",
-    "description":  "Application module and administration for Libra CMS",
+    "description":  "Locale module for Libra CMS",
     "keywords":     ["zf", "zf2", "zendframework", "CMS", "libra"],
     "homepage":     "http://www.libra-cms.ejoom.com",
     "time":         "2012-09-09",
