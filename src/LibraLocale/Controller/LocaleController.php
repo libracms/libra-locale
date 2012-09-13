@@ -3,35 +3,33 @@
 namespace LibraLocale\Controller;
 
 use Zend\Mvc\Controller\AbstractActionController;
-use Zend\Mvc\Router\Http\Segment;
 use Zend\Http\Request;
+use Zend\Mvc\Router\RouteMatch;
 use LibraLocale\Module;
 
 class LocaleController extends AbstractActionController
 {
     public function switchAction()
     {
-        $newLocale = $this->getRequest()->getQuery('to', Module::getOption('default'));
+        if (!isset($_SERVER['HTTP_REFERER'])) {
+            $basePath = $this->getServiceLocator()->get('ViewRenderer')->basePath();
+            return $this->redirect()->toUrl($basePath . '/');
+        }
+
         $uri = $_SERVER['HTTP_REFERER'];
-        $segment_options = array(
-            'route'    => '/[:locale_sef/[:others]]',
-            'constraints' => array(
-                'locale' => '[a-zA-Z][a-zA-Z0-9_-]*',
-                'others'     => '.+',
-            ),
-            'defaults' => array(
-                'locale' => '', //for main page (/)
-                'others' => '',
-            ),
-        );
-        $router = Segment::factory($segment_options);
+        $newLocale = $this->getRequest()->getQuery('to', Module::getOption('default'));
+        $router = $this->getEvent()->getRouter();
         $request = new Request();
         $request->setUri($uri);
-
         $routeMatch = $router->match($request);
-        $params = $request->getUri()->getQuery();
-        $others = $routeMatch->getParam('others');
-        return $this->redirect()->toUrl(rtrim("/{$newLocale}/{$others}?$params", '?')); //@todo need fix for invalid uri: /ru/aaa+fd
+
+        if (!$routeMatch instanceof RouteMatch) {
+            return $this->redirect()->toUrl($uri);
+        }
+        
+        $params = $routeMatch->getParams();
+        if (isset($params['locale'])) $params['locale'] = $newLocale; //don't override locale not care module param
+        return $this->redirect()->toRoute($routeMatch->getMatchedRouteName(), $params);
     }
 
 }
