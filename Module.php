@@ -95,7 +95,7 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         //redirect if this locale has alias for having only one instance of URI.
         if (static::hasLocaleAlias($locale)) {
             $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, static::getLocaleAlias($locale));
-            $statusCode = 301;
+            $statusCode = static::getOption('redirect_code');
             goto redirect;
         }
 
@@ -114,7 +114,7 @@ redirect:   $router = $e->getRouter();
             $url = $router->assemble($routeMatch->getParams(), array('name' => $routeMatch->getMatchedRouteName()));
             $response = $e->getResponse();
             $response->getHeaders()->addHeaderLine('Location', $url);
-            $response->setStatusCode(isset($statusCode) ? $statusCode : 303);
+            $response->setStatusCode(isset($statusCode) ? $statusCode : 302);
             return $response;
         }
 

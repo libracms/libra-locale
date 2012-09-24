@@ -60,4 +60,5 @@ return array(
             'en' => 'en-US',
         ),
     ),
+    'redirect_code' => '302',
 );
