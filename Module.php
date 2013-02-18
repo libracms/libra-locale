@@ -77,11 +77,12 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     public function redirectFromEmptyPath(MvcEvent $e)
     {
         if ($e->getRouteMatch()->getMatchedRouteName() == '__home') {
+            $statusCode = static::getOption('redirect_code');
             $router = $e->getRouter();
             $url = $router->assemble(array(), array('name' => static::$homeRouteName));
             $response = $e->getResponse();
             $response->getHeaders()->addHeaderLine('Location', $url);
-            $response->setStatusCode(301);
+            $response->setStatusCode($statusCode);
             return $response;
         }
     }
