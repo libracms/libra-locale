@@ -51,8 +51,8 @@ After this you can get locale from RouteMatch parameter. In Controller by code:
 
 This has a switcher, use by router with param 'to':
 ~~~
-    echo this->url('libra-locale/switch/query', array('to' => 'en'));
-    echo this->url('libra-locale/switch/query', array('to' => 'ru'));
+    echo $this->url('libra-locale/switch', array(), array('query' => array('to' => 'en')));
+    echo $this->url('libra-locale/switch', array(), array('query' => array('to' => 'ru')));
 ~~~
 
 Thanks for using my module.

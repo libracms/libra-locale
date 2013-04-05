@@ -18,17 +18,7 @@ return array(
                                 'action'     => 'switch',
                             ),
                         ),
-                        'may_terminate' => false,
-                        'child_routes' => array(
-                            'query' => array(
-                                'type' => 'Query',
-                                'options' => array(
-                                    'defaults' => array(
-                                        'to' => null,
-                                    ),
-                                ),
-                            ),
-                        ),
+                        'may_terminate' => true,
                     ),
                 ),
             ),
