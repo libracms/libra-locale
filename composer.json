@@ -1,11 +1,9 @@
 {
     "name":         "libra/libra-locale",
     "type":         "library",
-    "version":      "0.3.0",
-    "description":  "Locale module for Libra CMS",
+    "description":  "Zend Framework 2 Locale Module. It detect locale by individual module and transfer parameter 'locale' to its Controller",
     "keywords":     ["zf", "zf2", "zendframework", "CMS", "libra"],
-    "homepage":     "http://www.libra-cms.ejoom.com",
-    "time":         "2012-09-09",
+    "homepage":     "http://www.ejoom.com/libra-cms/",
     "license":      "BSD-3-Clause",
     "authors": [
         {"name": "Vitalii Nagara", "email": "duke@ejoom.com", "role": "maintainer, developer", "homepage": ""}
