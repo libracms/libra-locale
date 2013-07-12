@@ -2,7 +2,7 @@
 
 ##Description
 This module adds locale to yours modules. Also it set default locale site-widely.
-It makes application locale aware, add locale short aliases like usually used _en_, _fr_, _ru_, eanstead full _en_US_, _en_GB_.
+It makes application locale aware, add locale short aliases like usually used _en_, _fr_, _ru_, instead of full _en_US_, _en_GB_.
 
 ####Note!
 You can easily add this module to your project as LibraLocale change routes of individual modules only
