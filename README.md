@@ -62,10 +62,27 @@ or
 ~~~
     echo $this->url('libra-locale/switch', array(), array('query' => array('to' => 'fr')));
 ~~~
+
+####Checking if locales was enabled
+To disable locales you can:
+
+-  Comment out _locale_aware_ option in route. It should assume working for locale '*' or 'All' locales with enabled module.
+-  Disable _LibraLocale_ module.
+
+Then to check if application support locales use:
+~~~
+    if (\LibraModuleManager\Module::isModulePresent('LibraLocale')) {
+        //put code here
+    }
+~~~
+
+__Note:__ I've just realized there should be added a flag in configuration instead of disabling module. Will be implemented on demand.
+
+
 Thanks for using it module.
 
 ##Installation
-It available via composer package _libra/libra-locale_. 
+It available via composer package _libra/libra-locale_.
 -   Add to __composer.json__ required list: `"libra/libra-locale": "~0.3.0"`
 -   Enable module in __config/application.config.php__ module array by adding line: `'LibraLocale',`
 -   Copy `vendor/libra/libra-locale/config/libra-locale.global.php.dist` to `config/autoload/libra-locale.global.php`
