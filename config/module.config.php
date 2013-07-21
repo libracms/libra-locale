@@ -33,12 +33,6 @@ return array(
         ),
     ),
 
-    'view_manager' => array(
-        'template_path_stack' => array(
-            __DIR__ . '/../view',
-        ),
-    ),
-
     //defaults
     'libra_locale' => array(
         //default locale, not alias
