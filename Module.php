@@ -69,6 +69,24 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         return null;
     }
 
+    private function _redirect(MvcEvent $e, $locale = null, $routeName = null)
+    {
+        $routeMatch = $e->getRouteMatch();
+        $statusCode = static::getOption('redirect_code');
+        if ($locale !== null) {
+            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, $locale);
+        }
+        $router = $e->getRouter();
+        if ($routeName === null) {
+            $routeName = $routeMatch->getMatchedRouteName();
+        }
+        $url = $router->assemble($routeMatch->getParams(), array('name' => $routeName));
+        $response = $e->getResponse();
+        $response->getHeaders()->addHeaderLine('Location', $url);
+        $response->setStatusCode(isset($statusCode) ? $statusCode : 302);
+        return $response;
+    }
+
     /**
      * Redirect from singe domain name to locale home page
      * @param \Zend\Mvc\MvcEvent $e
@@ -77,14 +95,10 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     public function redirectFromEmptyPath(MvcEvent $e)
     {
         if ($e->getRouteMatch()->getMatchedRouteName() == '__home') {
-            $statusCode = static::getOption('redirect_code');
-            $router = $e->getRouter();
-            $url = $router->assemble(array(), array('name' => static::$homeRouteName));
-            $response = $e->getResponse();
-            $response->getHeaders()->addHeaderLine('Location', $url);
-            $response->setStatusCode($statusCode);
-            return $response;
+            return $this->_redirect($e, null, static::$homeRouteName);
         }
+
+        return 0;
     }
 
     public function redirectFromNonExistentLocale(MvcEvent $e)
@@ -95,9 +109,8 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 
         //redirect if this locale has alias for having only one instance of URI.
         if (static::hasLocaleAlias($locale)) {
-            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, static::getLocaleAlias($locale));
-            $statusCode = static::getOption('redirect_code');
-            goto redirect;
+            $localeAlias = static::getLocaleAlias($locale);
+            return $this->_redirect($e, $localeAlias);
         }
 
         //replace alias by existent locale
@@ -110,13 +123,7 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 
         $newLocale = Locale::lookup(static::getLocales(), $locale, false, static::getOption('default'));
         if ($newLocale !== $locale) {
-            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, $newLocale);
-redirect:   $router = $e->getRouter();
-            $url = $router->assemble($routeMatch->getParams(), array('name' => $routeMatch->getMatchedRouteName()));
-            $response = $e->getResponse();
-            $response->getHeaders()->addHeaderLine('Location', $url);
-            $response->setStatusCode(isset($statusCode) ? $statusCode : 302);
-            return $response;
+            return $this->_redirect($e, $newLocale);
         }
 
         return 0; //return success
