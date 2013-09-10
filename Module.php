@@ -2,138 +2,161 @@
 
 namespace LibraLocale;
 
-use Zend\ModuleManager\ModuleManager;
+use Locale;
 use Zend\ModuleManager\Feature\AutoloaderProviderInterface;
 use Zend\ModuleManager\Feature\ConfigProviderInterface;
-
 use Zend\ModuleManager\ModuleEvent;
+use Zend\ModuleManager\ModuleManager;
+use Zend\Mvc\ModuleRouteListener;
 use Zend\Mvc\MvcEvent;
-use Locale;
 
 class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 {
-    //const option for enable locale router and others
-    const LOCALE_AWARE = 'locale_aware';
+    // Disable locale for route
+    const DISABLE_LOCALE = 'disable_locale';
+
+    // Parameter name that will be set into RouteMatchs
     const LOCALE_ROUTE_PARAM = 'locale';
 
+    /**
+     * Runtime locale alias
+     * @var string
+     */
+    public static $alias;
+
+    /**
+     * Runtime locale tag
+     * @var string
+     */
     public static $locale;
-    protected static $homeRouteName;
+
     protected static $options;
 
     public function init(ModuleManager $moduleManager)
     {
+        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'setOptions'), 1010);
         $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'addLocaleToRoutes'), 1000);
-        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'setOptions'), 1);
     }
 
     public function addLocaleToRoutes(ModuleEvent $e)
     {
         $config = $e->getConfigListener()->getMergedConfig(false);
-        $this->setOptions($e);
         $routes = &$config['router']['routes'];
+
+        if (static::getOption('redirect_from_locale_tag')) {
+            $availableValueArray = array_unique(
+                array_merge(
+                    array_keys(static::getLocales()),
+                    array_values(static::getLocales())
+                )
+            );
+        } else {
+            $availableValueArray = array_keys(static::getLocales());
+        }
+        $localeConstraint = '(' . implode($availableValueArray, '|') . ')';
+        //$localeConstraint = '[a-zA-Z][a-zA-Z0-9_-]*';
+
         foreach ($routes as $key => &$route) {
-            if ($key == 'admin') continue;
-            if (!isset($route['options'][self::LOCALE_AWARE])
-                  || !isset($route['options'][self::LOCALE_AWARE])
-                  || $route['options'][self::LOCALE_AWARE] == false) {
+            if ($key === 'admin') continue;
+            if (isset($route['options'][self::DISABLE_LOCALE])
+                && $route['options'][self::DISABLE_LOCALE] !== false
+            ) {
                 continue;
             }
-            
-            //add redirect for home
-            if ($route['options']['route'] == '/') {
-                static::$homeRouteName = $key;
-                $routes['__home'] = array(
-                    'type' => 'Zend\Mvc\Router\Http\Literal',
-                    'options' => array(
-                        'route'    => '/',
-                    ),
-                );
-            }
 
-            if (strpos($route['options']['route'], ':locale') === false) {
-                $route['options']['route'] = '/:locale' . $route['options']['route'];
-            }
-            if (strtolower($route['type']) == 'literal' || $route['type'] == 'Zend\Mvc\Router\Http\Literal') {
+            if (strtolower($route['type']) === 'literal' || $route['type'] === 'Zend\Mvc\Router\Http\Literal') {
                 $route['type'] = 'Segment';
             }
-            if (!isset($route['options']['constraints'])) $route['options']['constraints'] = array();
-            $route['options']['constraints'] = array_merge($route['options']['constraints'], array('locale' => '[a-zA-Z][a-zA-Z_-]*'));
+            if (strtolower($route['type']) === 'segment' || $route['type'] === 'Zend\Mvc\Router\Http\Segment') {
+                if (strpos($route['options']['route'], ':locale') === false) {
+                    $route['options']['route'] = '[/:locale]' . $route['options']['route'];
+                }
+                if (!isset($route['options']['constraints'])) $route['options']['constraints'] = array();
+                $route['options']['constraints'] = array_merge(
+                    $route['options']['constraints'],
+                    array('locale' => $localeConstraint)
+                );
+            } elseif (strtolower($route['type']) === 'regex' || $route['type'] === 'Zend\Mvc\Router\Http\Regex') {
+                if (strpos($route['options']['route'], '<locale>') === false) {
+                    $route['options']['route'] = '(/(?P<locale>'.$localeConstraint.'))?' . $route['options']['route'];
+                    $route['options']['spec'] = '/locale' . $route['options']['spec'];  //@todo needs to make optional on assemling
+                }
+            } else {
+                //throw thomesing
+            }
 
             if (!isset($route['options']['defaults'])) $route['options']['defaults'] = array();
-            $defaultLocale = $config['libra_locale']['default'];
-            if (static::hasLocaleAlias($defaultLocale)) $defaultLocale = static::getLocaleAlias($defaultLocale);
-            $route['options']['defaults'] = array_merge($route['options']['defaults'], array('locale' => $defaultLocale));
+            $route['options']['defaults'] = array_merge(
+                $route['options']['defaults'],
+                array('locale' => static::getDefaultLocaleAlias())
+            );
         }
+
         $e->getConfigListener()->setMergedConfig($config);
-        static::$options = null; //don't use while not set at priority 1
-        return null;
     }
 
-    private function _redirect(MvcEvent $e, $locale = null, $routeName = null)
+    protected function _redirect(MvcEvent $e, $localeAlias = null, $routeName = null)
     {
         $routeMatch = $e->getRouteMatch();
         $statusCode = static::getOption('redirect_code');
-        if ($locale !== null) {
-            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, $locale);
+        if ($localeAlias !== null) {
+            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, $localeAlias);
         }
         $router = $e->getRouter();
         if ($routeName === null) {
             $routeName = $routeMatch->getMatchedRouteName();
         }
-        $url = $router->assemble($routeMatch->getParams(), array('name' => $routeName));
+
+        $routeMatchParams = $routeMatch->getParams();
+        if (isset($routeMatchParams[ModuleRouteListener::ORIGINAL_CONTROLLER])) {
+            $routeMatchParams['controller'] = $routeMatchParams[ModuleRouteListener::ORIGINAL_CONTROLLER];
+            unset($routeMatchParams[ModuleRouteListener::ORIGINAL_CONTROLLER]);
+        }
+        if (isset($routeMatchParams[ModuleRouteListener::MODULE_NAMESPACE])) {
+            unset($routeMatchParams[ModuleRouteListener::MODULE_NAMESPACE]);
+        }
+
+        $url = $router->assemble($routeMatchParams, array('name' => $routeName));
         $response = $e->getResponse();
         $response->getHeaders()->addHeaderLine('Location', $url);
         $response->setStatusCode(isset($statusCode) ? $statusCode : 302);
         return $response;
     }
 
-    /**
-     * Redirect from singe domain name to locale home page
-     * @param \Zend\Mvc\MvcEvent $e
-     * @return type
-     */
-    public function redirectFromEmptyPath(MvcEvent $e)
-    {
-        if ($e->getRouteMatch()->getMatchedRouteName() == '__home') {
-            return $this->_redirect($e, null, static::$homeRouteName);
-        }
-
-        return 0;
-    }
-
-    public function redirectFromNonExistentLocale(MvcEvent $e)
+    public function redirectFromLocaleTag(MvcEvent $e)
     {
         $routeMatch = $e->getRouteMatch();
-        $locale = $routeMatch->getParam(self::LOCALE_ROUTE_PARAM);
-        if ($locale === null) return 0;  //do nothing
+        $localeAlias = $routeMatch->getParam(self::LOCALE_ROUTE_PARAM);
+        if ($localeAlias === null) return 0;  //do nothing
 
-        //redirect if this locale has alias for having only one instance of URI.
-        if (static::hasLocaleAlias($locale)) {
-            $localeAlias = static::getLocaleAlias($locale);
-            return $this->_redirect($e, $localeAlias);
-        }
-
-        //replace alias by existent locale
-        if (key_exists($locale, static::getLocales())) {
-            $locales = static::getLocales();
-            $locale = $locales[$locale];
-            //set params for modules get param
-            $routeMatch->setParam(self::LOCALE_ROUTE_PARAM, $locale);
-        }
-
-        $newLocale = Locale::lookup(static::getLocales(), $locale, false, static::getOption('default'));
-        if ($newLocale !== $locale) {
-            return $this->_redirect($e, $newLocale);
+        // redirects to the closest alias if you typed a locale tag
+        if (!key_exists($localeAlias, static::getLocales())) {
+            $locale = $localeAlias;
+            //$newLocale = Locale::lookup(static::getLocales(), $locale, false, static::getDefaultLocaleAlias());
+            $newAlias = array_search($locale, static::getLocales());
+            //$newAlias = static::getAliasByLocale($newLocale);
+            if ($newAlias !== $localeAlias) {  // avoiding infinite redirect
+                return $this->_redirect($e, $newAlias);
+            }
         }
 
         return 0; //return success
     }
 
+    /**
+     * set locale system-wide
+     * @param \Zend\Mvc\MvcEvent $e
+     */
     public function setDefaultLocale(MvcEvent $e)
     {
-        $locale = $e->getRouteMatch()->getParam(self::LOCALE_ROUTE_PARAM);
-        static::$locale = $locale;
-        Locale::setDefault($locale);
+        static::$alias = $e->getRouteMatch()->getParam(self::LOCALE_ROUTE_PARAM);
+        static::$locale = static::getLocaleByAlias(static::$alias);
+        if (Locale::setDefault(static::$locale) === false) {
+            throw new \RuntimeException(sprintf(
+                'Not valid locale %s to set it as default',
+                static::$locale
+            ));
+        }
     }
 
     /**
@@ -143,8 +166,9 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
      */
     public function onBootstrap(MvcEvent $e)
     {
-        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromEmptyPath'));
-        $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromNonExistentLocale'));
+        if (static::getOption('redirect_from_locale_tag')) {
+            $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'redirectFromLocaleTag'));
+        }
         $e->getApplication()->getEventManager()->attach(MvcEvent::EVENT_ROUTE, array($this, 'setDefaultLocale'));
         return;
     }
@@ -168,16 +192,37 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         return static::getOption('locales');
     }
 
-    public static function hasLocaleAlias($locale)
+    /**
+     * Return locale tag by alias.
+     * If alias doesn't exist will return default locale
+     *
+     * @param string $alias
+     * @return sting
+     */
+    public static function getLocaleByAlias($alias)
     {
-        $key = array_search($locale, static::getLocales());
-        return is_string($key) ? true : false;
+        $locales = static::getLocales();
+        if (!array_key_exists($alias, $locales)) {
+            return false;
+            //$alias = static::getDefaultLocaleAlias();
+        }
+
+        return $locales[$alias];
     }
 
-    public static function getLocaleAlias($locale)
+    public static function getAliasByLocale($locale)
     {
         $key = array_search($locale, static::getLocales());
         return is_string($key) ? $key : $locale;
+    }
+
+    public static function getDefaultLocaleAlias()
+    {
+        $aliasOrTag = static::getOption('default');
+        // explicit take locale alias
+        $alias = static::getAliasByLocale($aliasOrTag);
+
+        return $alias;
     }
 
     public function getConfig()
@@ -195,5 +240,4 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
             ),
         );
     }
-
 }

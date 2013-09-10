@@ -35,14 +35,10 @@ return array(
 
     //defaults
     'libra_locale' => array(
-        //default locale, not alias
-        'default' => 'en-US',
-        //language tags and their shotcuts
         'locales' => array(
-            //alias => langtag
-            // or only locale value
             'en' => 'en-US',
         ),
+        'default' => 'en',
     ),
     'redirect_code' => '302',
 );

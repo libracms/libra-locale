@@ -10,25 +10,14 @@
     ],
 
     "require": {
-        "php":          ">=5.3.3",
-        "libra/libra-module-manager": "dev-master"
-    },
-
-    "require-dev": {
-        
+        "php":                          ">=5.3.3",
+        "zendframework/zend-mvc":       "2.*",
+        "zendframework/zend-i18n":      "2.*",
+        "libra/libra-module-manager":   "dev-master"
     },
 
     "autoload": {
         "psr-0": {"LibraLocale": "src"},
         "classmap": ["Module.php"]
-    },
-
-    "provide": {
-      
-    },
-
-    "suggest": {
-        "libra/libra-article": "Add main CMS functionality"
     }
-
 }

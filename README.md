@@ -87,3 +87,16 @@ It available via composer package _libra/libra-locale_.
 -   Enable module in __config/application.config.php__ module array by adding line: `'LibraLocale',`
 -   Copy `vendor/libra/libra-locale/config/libra-locale.global.php.dist` to `config/autoload/libra-locale.global.php`
 -   Enable it for wished module as described in use paragraph above.
+
+
+##Changelog
+v0.5.0 
+After some experience I decided to make default locale path is '/' instead of '/locale/' hence of
+rare changing of default locale and there can be duplicate pages if you have locale extlang subtag like
+en-US and en-GB - will be almost identical. So search engines should recognize them as same text
+in different locales (I hope it'll be in future).
+There added parameters in configuration to setup redirect behavior.
+Separator hyphen kept (not underscore) due to (http://www.w3.org/International/articles/language-tags/)
+and (http://en.wikipedia.org/wiki/IETF_language_tag) 
+and (http://docs.oracle.com/javase/7/docs/api/java/util/Locale.html) new standards.
+The default locale at '/' will do smoother adding locale in projects without locale.
