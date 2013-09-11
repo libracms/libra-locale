@@ -36,6 +36,33 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     {
         $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'setOptions'), 1010);
         $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'addLocaleToRoutes'), 1000);
+
+        // a little hacky but it avoid rewriting of many codes
+        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'overrideViewHelperUrl'));
+    }
+
+    // override url view helper with new locale aware
+    public function overrideViewHelperUrl(ModuleEvent $e)
+    {
+        $serviceLocator = $e->getParam('ServiceManager');
+        $viewHelperManager = $serviceLocator->get('ViewHelperManager');
+        // Configure URL view helper with router
+        $viewHelperManager->setFactory('url', function ($sm) use ($serviceLocator) {
+            $helper = new View\Helper\Url;
+            $router = \Zend\Console\Console::isConsole() ? 'HttpRouter' : 'Router';
+            $helper->setRouter($serviceLocator->get($router));
+
+            $match = $serviceLocator->get('application')
+                ->getMvcEvent()
+                ->getRouteMatch()
+            ;
+
+            if ($match instanceof \Zend\Mvc\Router\RouteMatch) {
+                $helper->setRouteMatch($match);
+            }
+
+            return $helper;
+        });
     }
 
     public function addLocaleToRoutes(ModuleEvent $e)
@@ -223,6 +250,15 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         $alias = static::getAliasByLocale($aliasOrTag);
 
         return $alias;
+    }
+
+    public function getControllerPluginConfig()
+    {
+        return array(
+            'invokables' => array(
+                'url' => 'LibraLocale\Mvc\Controller\Plugin\Url',
+            ),
+        );
     }
 
     public function getConfig()
