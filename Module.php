@@ -214,6 +214,11 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         return static::$options[$option];
     }
 
+    /**
+     * Get list of of available and allowed aliases and locales in format
+     * 'alias' => 'locale tag',
+     * @return array
+     */
     public static function getLocales()
     {
         return static::getOption('locales');
