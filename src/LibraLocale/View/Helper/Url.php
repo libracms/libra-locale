@@ -11,7 +11,6 @@ use Zend\Mvc\Router\RouteMatch;
 use Zend\Mvc\Router\RouteStackInterface;
 use Zend\View\Exception;
 use Zend\View\Helper\AbstractHelper;
-use Zend\View\Exception;
 
 /**
  * Helper for making easy links and getting urls that depend on the routes and router.
@@ -91,7 +90,7 @@ class Url extends AbstractHelper
             }
 
             $params = array_merge($routeMatchParams, $params);
-        } else {
+        } elseif ($this->routeMatch !== null) {
             // Set current locale if it presents
             $currentLocaleAlias = $this->routeMatch->getParam('locale') !== null ? $this->routeMatch->getParam('locale') : false;
             if (!array_key_exists('locale', $params) && $currentLocaleAlias) {

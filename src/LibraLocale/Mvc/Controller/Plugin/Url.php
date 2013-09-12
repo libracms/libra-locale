@@ -90,7 +90,7 @@ class Url extends ZendUrl
             }
 
             $params = array_merge($routeMatchParams, $params);
-        } else {
+        } elseif ($matches) {
             // Set current locale if it presents
             $currentLocaleAlias = $matches->getParam('locale') !== null ? $matches->getParam('locale') : false;
             if (!array_key_exists('locale', $params) && $currentLocaleAlias) {
