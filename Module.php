@@ -1,4 +1,7 @@
 <?php
+/**
+ * Libra-CMS (http://www.ejoom.com/libra-cms/)
+ */
 
 namespace LibraLocale;
 
@@ -184,6 +187,12 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
                 static::$locale
             ));
         }
+
+        // Set translator
+        $translator = $e->getApplication()->getServiceManager()->get('MvcTranslator');
+        $parsedLocale = \Locale::parseLocale(static::$locale);
+        $languageAndRegion = $parsedLocale['language'] . '-' . $parsedLocale['region'];
+        $translator->setLocale($languageAndRegion);
     }
 
     /**
