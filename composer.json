@@ -12,7 +12,8 @@
     "require": {
         "php":                          ">=5.3.3",
         "zendframework/zend-mvc":       "2.*",
-        "zendframework/zend-i18n":      "2.*"
+        "zendframework/zend-i18n":      "2.*",
+        "libra/libra-module-manager":   "1.*"
     },
 
     "extra": {
