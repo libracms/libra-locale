@@ -44,7 +44,7 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
         $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'overrideViewHelperUrl'));
 
         //cann't do it in the ViewHelperConfig so we do it by factory
-        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'addViewHelperIsLocale'));
+        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'addViewHelperLocale'));
     }
 
     // override url view helper with new locale aware
@@ -72,13 +72,13 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
     }
 
     // override url view helper with new locale aware
-    public function addViewHelperIsLocale(ModuleEvent $e)
+    public function addViewHelperLocale(ModuleEvent $e)
     {
         $serviceLocator = $e->getParam('ServiceManager');
         $viewHelperManager = $serviceLocator->get('ViewHelperManager');
         // Configure URL view helper with router
-        $viewHelperManager->setFactory('isLocale', function ($sm) use ($serviceLocator) {
-            $helper = new View\Helper\IsLocale();
+        $viewHelperManager->setFactory('locale', function ($sm) use ($serviceLocator) {
+            $helper = new View\Helper\Locale();
 
             $match = $serviceLocator->get('application')
                 ->getMvcEvent()
