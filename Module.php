@@ -42,6 +42,9 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
 
         // a little hacky but it avoid rewriting of many codes
         $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'overrideViewHelperUrl'));
+
+        //cann't do it in the ViewHelperConfig so we do it by factory
+        $moduleManager->getEventManager()->attach(ModuleEvent::EVENT_LOAD_MODULES_POST, array($this, 'addViewHelperIsLocale'));
     }
 
     // override url view helper with new locale aware
@@ -54,6 +57,28 @@ class Module implements AutoloaderProviderInterface, ConfigProviderInterface
             $helper = new View\Helper\Url;
             $router = \Zend\Console\Console::isConsole() ? 'HttpRouter' : 'Router';
             $helper->setRouter($serviceLocator->get($router));
+
+            $match = $serviceLocator->get('application')
+                ->getMvcEvent()
+                ->getRouteMatch()
+            ;
+
+            if ($match instanceof \Zend\Mvc\Router\RouteMatch) {
+                $helper->setRouteMatch($match);
+            }
+
+            return $helper;
+        });
+    }
+
+    // override url view helper with new locale aware
+    public function addViewHelperIsLocale(ModuleEvent $e)
+    {
+        $serviceLocator = $e->getParam('ServiceManager');
+        $viewHelperManager = $serviceLocator->get('ViewHelperManager');
+        // Configure URL view helper with router
+        $viewHelperManager->setFactory('isLocale', function ($sm) use ($serviceLocator) {
+            $helper = new View\Helper\IsLocale();
 
             $match = $serviceLocator->get('application')
                 ->getMvcEvent()

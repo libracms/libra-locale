@@ -10,13 +10,12 @@ use Zend\Mvc\ModuleRouteListener;
 use Zend\Mvc\Router\RouteMatch;
 use Zend\Mvc\Router\RouteStackInterface;
 use Zend\View\Exception;
-use Zend\View\Helper\Url as ZendUrl;
+use Zend\View\Helper\AbstractHelper;
 
 /**
  * Helper for making easy links and getting urls that depend on the routes and router.
- * Extend the ZendUrl to avoid problem on checking to instance of
  */
-class Url extends ZendUrl
+class Url extends AbstractHelper
 {
     /**
      * RouteStackInterface instance.
@@ -28,7 +27,7 @@ class Url extends ZendUrl
     /**
      * RouteInterface match returned by the router.
      *
-     * @var RouteMatch.
+     * @var RouteMatch
      */
     protected $routeMatch;
 
