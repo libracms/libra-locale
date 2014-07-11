@@ -47,15 +47,12 @@ class Locale extends AbstractHelper
     /**
      * Gets current locale alias
      *
+     * @deprecated since version 0.6.1
+     * @see alias
      * @return string
      */
-    public function current()
-    {
-        if (null === $this->currentLocale) {
-            $this->currentLocale = $this->routeMatch->getParam('locale');
-        }
-
-        return $this->currentLocale;
+    public function current() {
+        return $this->alias;
     }
 
     /**
@@ -76,7 +73,21 @@ class Locale extends AbstractHelper
     }
 
     /**
-     * Get full language tag
+     * Gets current locale alias
+     *
+     * @return string
+     */
+    public function alias()
+    {
+        if (null === $this->currentLocale) {
+            $this->currentLocale = $this->routeMatch->getParam('locale');
+        }
+
+        return $this->currentLocale;
+    }
+
+    /**
+     * Gets current full language tag
      *
      * @return string
      */
