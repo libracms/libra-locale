@@ -93,7 +93,7 @@ class Locale extends AbstractHelper
      */
     public function tag()
     {
-        return LocaleModule::getLocaleByAlias($this->current());
+        return LocaleModule::getLocaleByAlias($this->alias());
     }
 
     /**
